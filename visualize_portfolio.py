@@ -1,25 +1,27 @@
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-from dash import Dash, dcc, html
+from dash import Dash, dcc, html, Input, Output
 from threading import Timer
 from main import kill_port, open_browser
 from utils import (
-    SHOW_DOLLAR,
-    TEMP_FILE,
-    PORT_PORTFOLIO,
+    configure_pie_traces,
+    parse_args,
+    set_current_theme,
+    CONTRIBUTION_COLORS,
     DEFAULT_STYLE,
-    H1_STYLE,
-    H2_STYLE,
     DIVIDER_STYLE,
     GAIN_COLOR_SCHEME,
-    CONTRIBUTION_COLORS,
-    TABLE_STYLE,
+    H1_STYLE,
+    H2_STYLE,
+    PIE_SCHEME,
+    PORT_PORTFOLIO,
+    SHOW_DOLLAR,
     TABLE_HEADER_STYLE,
-    TABLE_SECTION_TITLE_STYLE,
     TABLE_ROW_STYLE,
-    configure_pie_traces,
-    parse_args
+    TABLE_SECTION_TITLE_STYLE,
+    TABLE_STYLE,
+    TEMP_FILE
 )
 
 def visualize_portfolio(portfolio_file):
@@ -34,7 +36,7 @@ def visualize_portfolio(portfolio_file):
 
     # Load and validate the portfolio data
     portfolio = pd.read_csv(portfolio_file)
-    valid_portfolio = portfolio[portfolio["Value"] > 0]
+    valid_portfolio = portfolio[portfolio["Value"] > 0].copy()
 
     if valid_portfolio.empty:
         raise ValueError("No valid data to visualize.")
@@ -88,7 +90,8 @@ def visualize_portfolio(portfolio_file):
                             px.pie(
                                 type_summary,
                                 values="Value",
-                                names="Type"
+                                names="Type",
+                                color_discrete_sequence=PIE_SCHEME
                             ).update_layout(
                                 paper_bgcolor=TABLE_STYLE["backgroundColor"],
                                 font=dict(
@@ -258,7 +261,7 @@ def visualize_portfolio(portfolio_file):
             ),
             html.Hr(style=DIVIDER_STYLE),
 
-            # Portfolio Summary Section
+            # Overview Section
             html.Div(
                 style={
                     "backgroundColor": TABLE_STYLE["backgroundColor"],
@@ -268,7 +271,7 @@ def visualize_portfolio(portfolio_file):
                 },
                 children=(
                     [
-                        html.H2("Portfolio Summary", style=H2_STYLE),
+                        html.H2("Overview", style=H2_STYLE),
                         *[
                             html.Div(
                                 children=[
@@ -353,8 +356,8 @@ def visualize_portfolio(portfolio_file):
     # Run the app server
     app.run_server(debug=True, use_reloader=False, port=PORT_PORTFOLIO)
 
-
 if __name__ == "__main__":
     args = parse_args()
     SHOW_DOLLAR = args.show_dollar
+    set_current_theme(args.theme)
     visualize_portfolio(TEMP_FILE)

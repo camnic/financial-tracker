@@ -5,20 +5,21 @@ import plotly.express as px
 from threading import Timer
 from main import kill_port, open_browser
 from utils import (
-    SHOW_DOLLAR,
-    DATA_FILE,
-    PORT_BUDGET,
-    DEFAULT_STYLE,
-    H1_STYLE,
-    H2_STYLE,
-    DIVIDER_STYLE,
-    COLOR_SCHEME,
-    TABLE_STYLE,
-    TABLE_HEADER_STYLE,
-    TABLE_SECTION_TITLE_STYLE,
-    TABLE_ROW_STYLE,
     configure_pie_traces,
     parse_args,
+    set_current_theme,
+    DATA_FILE,
+    DEFAULT_STYLE,
+    DIVIDER_STYLE,
+    H1_STYLE,
+    H2_STYLE,
+    PIE_SCHEME,
+    PORT_BUDGET,
+    SHOW_DOLLAR,
+    TABLE_HEADER_STYLE,
+    TABLE_ROW_STYLE,
+    TABLE_SECTION_TITLE_STYLE,
+    TABLE_STYLE
 )
 
 def visualize_budget(data_file):
@@ -49,7 +50,7 @@ def visualize_budget(data_file):
     # Prepare data for the Sankey diagram
     nodes = []
     links = {"source": [], "target": [], "value": [], "color": []}
-    combined_colors = COLOR_SCHEME * ((len(income_data) + len(expenses_data)) // len(COLOR_SCHEME) + 1)
+    combined_colors = PIE_SCHEME * ((len(income_data) + len(expenses_data)) // len(PIE_SCHEME) + 1)
 
     def add_node(label):
         """Add a unique node to the Sankey diagram."""
@@ -227,4 +228,5 @@ def visualize_budget(data_file):
 if __name__ == "__main__":
     args = parse_args()
     SHOW_DOLLAR = args.show_dollar
+    set_current_theme(args.theme)
     visualize_budget(DATA_FILE)

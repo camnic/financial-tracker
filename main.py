@@ -1,11 +1,23 @@
 import os
 import psutil
-from dash import Dash, html, Input, Output, callback_context
+from dash import Dash, html, dcc, Input, Output, State, callback_context
 import webbrowser
 from threading import Timer
-from utils import PORT_MAIN, PORT_PORTFOLIO, PORT_BUDGET, PORT_API, DEFAULT_STYLE
+from utils import (
+    DEFAULT_COLORS,
+    DEFAULT_STYLE,
+    PORT_API,
+    PORT_BUDGET,
+    PORT_MAIN,
+    PORT_PORTFOLIO,
+    SHOW_DOLLAR,
+    THEMES,
+    current_theme,
+    parse_args,
+    get_colors,
+    set_current_theme
+)
 
-# Script Configuration
 FUNCTIONS = {
     "calculate_portfolio": ("calculate_portfolio.py", PORT_API),
     "visualize_portfolio": ("visualize_portfolio.py", PORT_PORTFOLIO),
@@ -13,12 +25,6 @@ FUNCTIONS = {
 }
 
 def kill_port(port):
-    """
-    Kill any process using the specified port.
-
-    Args:
-        port (int): The port to free up.
-    """
     for proc in psutil.process_iter(['pid', 'name']):
         try:
             for conn in proc.connections(kind='inet'):
@@ -28,152 +34,125 @@ def kill_port(port):
             continue
 
 def open_browser(port):
-    """
-    Automatically open the Dash app in a web browser.
-
-    Args:
-        port (int): The port the app is running on.
-    """
     webbrowser.open_new(f"http://127.0.0.1:{port}")
 
-def run_function(script_name, port, show_dollar):
-    """
-    Run the selected script in a new tab with the feature flag.
-
-    Args:
-        script_name (str): The script to execute.
-        port (int): The port the script will run on.
-        show_dollar (bool): Feature flag for showing dollar values.
-    """
+def run_function(script_name, port, show_dollar, theme):
     kill_port(port)
-    os.system(f"python3 {script_name} --show-dollar {str(show_dollar)} &")
+    os.system(f"python3 {script_name} --show-dollar {str(show_dollar).lower()} --theme {theme} &")
 
 def main():
-    """
-    Create and run the Dash app for selecting and running scripts.
-    """
-    global SHOW_DOLLAR
+    global current_theme, SHOW_DOLLAR
+
     kill_port(PORT_MAIN)
     app = Dash(__name__)
 
-    # App Layout
-    app.layout = html.Div(
-        style=DEFAULT_STYLE,
-        children=[
-            html.H1("Main Menu", style={"textAlign": "center", "fontSize": "24px"}),
-            html.Hr(),
+    def get_layout():
+        theme_colors = get_colors(current_theme)
+        style = {
+            **DEFAULT_STYLE,
+            "backgroundColor": theme_colors["dark"],
+            "color": theme_colors["white"]
+        }
+        return html.Div(
+            style=style,
+            children=[
+                html.H1("Main Menu", style={"textAlign": "center", "fontSize": "24px"}),
+                html.Hr(),
+                # Theme Dropdown
+                html.Div(
+                    [
+                        html.Label("Select Theme:", style={"fontSize": "16px", "fontWeight": "bold"}),
+                        dcc.Dropdown(
+                            id="theme_dropdown",
+                            options=[{"label": theme.title(), "value": theme} for theme in THEMES],
+                            value=current_theme,
+                            style={"width": "50%", "margin": "0 auto", "color": DEFAULT_COLORS["bold"],},
+                        ),
+                    ],
+                    style={"textAlign": "center", "marginBottom": "20px"},
+                ),
+                # Feature Flag Section
+                html.Div(
+                    [
+                        html.Label(id="feature_flag_label", style={"fontSize": "16px", "fontWeight": "bold"}),
+                        html.Button(
+                            id="feature_flag_button",
+                            n_clicks=0,
+                            children="Show",
+                            style={"margin": "10px"},
+                        ),
+                    ],
+                    style={"textAlign": "center", "marginBottom": "20px"},
+                ),
+                # Script Buttons
+                html.Div(
+                    [
+                        html.Button("Calculate Portfolio", id="calculate_portfolio", n_clicks=0, style={"margin": "10px"}),
+                        html.Button("Visualize Portfolio", id="visualize_portfolio", n_clicks=0, style={"margin": "10px"}),
+                        html.Button("Visualize Budget", id="visualize_budget", n_clicks=0, style={"margin": "10px"}),
+                    ],
+                    style={"textAlign": "center"},
+                ),
+                # Output Section
+                html.Div(id="output", style={"textAlign": "center", "marginTop": "20px", "fontSize": "16px"}),
+            ]
+        )
 
-            # Feature Flag Section
-            html.Div(
-                [
-                    html.Label(
-                        id="feature_flag_label",
-                        style={"fontSize": "16px", "fontWeight": "bold", "marginRight": "10px"},
-                    ),
-                    html.H3(),
-                    html.Button(
-                        id="feature_flag_button",
-                        n_clicks=0,
-                        style={"margin": "10px"},
-                    ),
-                    html.Hr(),
-                ],
-                style={"textAlign": "center", "marginBottom": "20px"},
-            ),
+    app.layout = get_layout()
 
-            # Script Buttons
-            html.Div(
-                [
-                    html.Button(
-                        "Calculate Portfolio",
-                        id="calculate_portfolio",
-                        n_clicks=0,
-                        style={"margin": "10px"},
-                    ),
-                    html.Button(
-                        "Visualize Portfolio",
-                        id="visualize_portfolio",
-                        n_clicks=0,
-                        style={"margin": "10px"},
-                    ),
-                    html.Button(
-                        "Visualize Budget",
-                        id="visualize_budget",
-                        n_clicks=0,
-                        style={"margin": "10px"},
-                    ),
-                ],
-                style={"textAlign": "center"},
-            ),
-
-            # Output Section
-            html.Div(
-                id="output",
-                style={"textAlign": "center", "marginTop": "20px", "fontSize": "16px"},
-            ),
-        ],
-    )
-
-    # Callback: Toggle Feature Flag
     @app.callback(
-        [Output("feature_flag_label", "children"),
-         Output("feature_flag_button", "children")],
+        [Output("feature_flag_label", "children"), Output("feature_flag_button", "children")],
         Input("feature_flag_button", "n_clicks"),
     )
     def toggle_feature_flag(n_clicks):
-        """
-        Toggle the feature flag and update label and button text.
-
-        Args:
-            n_clicks (int): Number of times the button has been clicked.
-
-        Returns:
-            Tuple[str, str]: Updated label and button text.
-        """
         global SHOW_DOLLAR
         SHOW_DOLLAR = n_clicks % 2 == 0
-        label_text = "Balance Visible" if SHOW_DOLLAR else "Balance Hidden"
-        button_text = "Hide" if SHOW_DOLLAR else "Show"
-        return label_text, button_text
+        return ("Balance Visible" if SHOW_DOLLAR else "Balance Hidden",
+                "Hide" if SHOW_DOLLAR else "Show")
 
-    # Callback: Handle Button Clicks
     @app.callback(
         Output("output", "children"),
         [Input("calculate_portfolio", "n_clicks"),
          Input("visualize_portfolio", "n_clicks"),
          Input("visualize_budget", "n_clicks")],
+        State("theme_dropdown", "value"),
     )
-    def handle_button_click(calc_clicks, vis_port_clicks, vis_budget_clicks):
-        """
-        Handle button clicks and run the corresponding script.
-
-        Args:
-            calc_clicks (int): Clicks for the "Calculate Portfolio" button.
-            vis_port_clicks (int): Clicks for the "Visualize Portfolio" button.
-            vis_budget_clicks (int): Clicks for the "Visualize Budget" button.
-
-        Returns:
-            str: Status message indicating the action taken.
-        """
+    def handle_button_click(calc_clicks, vis_port_clicks, vis_budget_clicks, selected_theme):
         triggered = callback_context.triggered
-
         if not triggered:
             return "No action taken yet."
 
         button_id = triggered[0]["prop_id"].split(".")[0]
-
         if button_id in FUNCTIONS:
+            current_theme = selected_theme
+            balance_visibility = "visible" if SHOW_DOLLAR else "hidden"
             script_name, port = FUNCTIONS[button_id]
-            run_function(script_name, port, SHOW_DOLLAR)
-            return f"Running {button_id.replace('_', ' ').title()}"
+            run_function(script_name, port, SHOW_DOLLAR, current_theme)
+            return html.Div([
+                html.Div(f"Running: {button_id.replace('_', ' ').title()}", style={"fontWeight": "bold"}),
+                html.Div(f"Theme: {current_theme.title()}"),
+                html.Div(f"Balance: {balance_visibility.title()}")
+            ])
 
         return "Invalid action."
 
-    # Automatically open the app in a browser
-    Timer(1, open_browser, args=[PORT_MAIN]).start()
+    @app.callback(
+        Output("theme_dropdown", "value"),
+        Input("theme_dropdown", "value"),
+    )
+    def update_theme(selected_theme):
+        global current_theme
+        if callback_context.triggered and "theme_dropdown" in callback_context.triggered[0]["prop_id"]:
+            current_theme = selected_theme
+            set_current_theme(selected_theme)
+        return selected_theme
 
-    # Run the app
+    Timer(1, open_browser, args=[PORT_MAIN]).start()
     app.run_server(debug=True, use_reloader=False, port=PORT_MAIN)
 
+
 if __name__ == "__main__":
+    args = parse_args()
+    SHOW_DOLLAR = args.show_dollar
+    set_current_theme(args.theme)
     main()

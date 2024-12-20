@@ -1,7 +1,12 @@
 import pandas as pd
 import requests
 from datetime import datetime
-from utils import ALPHA_VANTAGE_API_KEY, INPUT_FILE, TEMP_FILE, LONG_TERM_HOLD_YEARS
+from utils import (
+    ALPHA_VANTAGE_API_KEY,
+    INPUT_FILE,
+    TEMP_FILE,
+    LONG_TERM_HOLD_YEARS
+)
 
 def get_price(ticker, asset_type):
     """
