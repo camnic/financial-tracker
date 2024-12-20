@@ -13,9 +13,11 @@ from utils import (
     SHOW_DOLLAR,
     THEMES,
     current_theme,
+    main_background,
     parse_args,
     get_colors,
-    set_current_theme
+    set_current_theme,
+    generate_main_content
 )
 
 FUNCTIONS = {
@@ -44,21 +46,19 @@ def main():
     global current_theme, SHOW_DOLLAR
 
     kill_port(PORT_MAIN)
-    app = Dash(__name__)
+
+    app = Dash(__name__, suppress_callback_exceptions=True)
 
     def get_layout():
         theme_colors = get_colors(current_theme)
         style = {
             **DEFAULT_STYLE,
-            "backgroundColor": theme_colors["dark"],
-            "color": theme_colors["white"]
+            "backgroundColor": main_background
         }
         return html.Div(
             style=style,
             children=[
-                html.H1("Main Menu", style={"textAlign": "center", "fontSize": "24px"}),
-                html.Hr(),
-                # Theme Dropdown
+                # Theme Dropdown Section
                 html.Div(
                     [
                         html.Label("Select Theme:", style={"fontSize": "16px", "fontWeight": "bold"}),
@@ -66,39 +66,19 @@ def main():
                             id="theme_dropdown",
                             options=[{"label": theme.title(), "value": theme} for theme in THEMES],
                             value=current_theme,
-                            style={"width": "50%", "margin": "0 auto", "color": DEFAULT_COLORS["bold"],},
+                            style={"width": "50%", "margin": "0 auto", "color": DEFAULT_COLORS["bold"]},
                         ),
                     ],
                     style={"textAlign": "center", "marginBottom": "20px"},
                 ),
-                # Feature Flag Section
+                # Main Content Section (Dynamic Content)
                 html.Div(
-                    [
-                        html.Label(id="feature_flag_label", style={"fontSize": "16px", "fontWeight": "bold"}),
-                        html.Button(
-                            id="feature_flag_button",
-                            n_clicks=0,
-                            children="Show",
-                            style={"margin": "10px"},
-                        ),
-                    ],
-                    style={"textAlign": "center", "marginBottom": "20px"},
+                    id="main_content",
+                    style={"padding": "20px"},
+                    children=generate_main_content(current_theme),
                 ),
-                # Script Buttons
-                html.Div(
-                    [
-                        html.Button("Calculate Portfolio", id="calculate_portfolio", n_clicks=0, style={"margin": "10px"}),
-                        html.Button("Visualize Portfolio", id="visualize_portfolio", n_clicks=0, style={"margin": "10px"}),
-                        html.Button("Visualize Budget", id="visualize_budget", n_clicks=0, style={"margin": "10px"}),
-                    ],
-                    style={"textAlign": "center"},
-                ),
-                # Output Section
-                html.Div(id="output", style={"textAlign": "center", "marginTop": "20px", "fontSize": "16px"}),
-            ]
+            ],
         )
-
-    app.layout = get_layout()
 
     @app.callback(
         [Output("feature_flag_label", "children"), Output("feature_flag_button", "children")],
@@ -135,7 +115,8 @@ def main():
             ])
 
         return "Invalid action."
-
+    
+    app.layout = get_layout()
     @app.callback(
         Output("theme_dropdown", "value"),
         Input("theme_dropdown", "value"),
@@ -146,6 +127,17 @@ def main():
             current_theme = selected_theme
             set_current_theme(selected_theme)
         return selected_theme
+    
+    @app.callback(
+        Output("main_content", "children"),
+        Input("theme_dropdown", "value"),
+    )
+    def update_main_content(selected_theme):
+        global current_theme
+        if callback_context.triggered and "theme_dropdown" in callback_context.triggered[0]["prop_id"]:
+            current_theme = selected_theme
+            set_current_theme(selected_theme)
+        return generate_main_content(selected_theme)
 
     Timer(1, open_browser, args=[PORT_MAIN]).start()
     app.run_server(debug=True, use_reloader=False, port=PORT_MAIN)

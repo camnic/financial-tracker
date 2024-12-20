@@ -120,24 +120,72 @@ def get_layout():
     Returns:
         dash.html.Div: A Dash HTML Div element representing the main page layout.
     """
+    theme_colors = get_colors(current_theme)
+    style = {
+        **DEFAULT_STYLE,
+        "backgroundColor": theme_colors["dark"],
+        "color": theme_colors["white"]
+    }
     return html.Div(
-        style=DEFAULT_STYLE,
+        style=style,
         children=[
-            html.H1("Main Menu", style=H1_STYLE),
-            html.Hr(style=DIVIDER_STYLE),
+            html.H1("Main Menu", style={"textAlign": "center", "fontSize": "24px"}),
+            html.Hr(),
+            # Theme Dropdown
             html.Div(
                 [
-                    html.Label("Select Theme:", style={"fontSize": "16px", "fontWeight": "bold", "color": DEFAULT_STYLE["color"]}),
+                    html.Label("Select Theme:", style={"fontSize": "16px", "fontWeight": "bold"}),
                     dcc.Dropdown(
                         id="theme_dropdown",
                         options=[{"label": theme.title(), "value": theme} for theme in THEMES],
                         value=current_theme,
-                        style={"width": "50%", "margin": "0 auto", "backgroundColor": DEFAULT_COLORS["medium"], "color": DEFAULT_COLORS["white"]},
+                        style={"width": "50%", "margin": "0 auto", "color": DEFAULT_COLORS["bold"]},
                     ),
                 ],
                 style={"textAlign": "center", "marginBottom": "20px"},
             ),
+            # Placeholder for dynamically updated content
+            html.Div(id="main_content", children=generate_main_content(current_theme)),
         ]
+    )
+
+def generate_main_content(theme):
+    theme_colors = get_colors(theme)
+    style = {
+        **DEFAULT_STYLE,
+        "backgroundColor": theme_colors["dark"],
+        "color": theme_colors["white"]
+    }
+    return html.Div(
+        style=style,
+        children=[
+            html.H1("Main Menu", style={"textAlign": "center", "fontSize": "24px"}),
+            html.Hr(),
+            # Feature Flag Section
+            html.Div(
+                [
+                    html.Label(id="feature_flag_label", style={"fontSize": "16px", "fontWeight": "bold"}),
+                    html.Button(
+                        id="feature_flag_button",
+                        n_clicks=0,
+                        children="Show",
+                        style={"margin": "10px"},
+                    ),
+                ],
+                style={"textAlign": "center", "marginBottom": "20px"},
+            ),
+            # Script Buttons
+            html.Div(
+                [
+                    html.Button("Calculate Portfolio", id="calculate_portfolio", n_clicks=0, style={"margin": "10px"}),
+                    html.Button("Visualize Portfolio", id="visualize_portfolio", n_clicks=0, style={"margin": "10px"}),
+                    html.Button("Visualize Budget", id="visualize_budget", n_clicks=0, style={"margin": "10px"}),
+                ],
+                style={"textAlign": "center"},
+            ),
+            # Output Section
+            html.Div(id="output", style={"textAlign": "center", "marginTop": "20px", "fontSize": "16px"}),
+        ],
     )
 
 # Load API keys from environment file
@@ -221,6 +269,7 @@ THEMES = {
 }
 
 # Theme Selection
+main_background = "#4F4F4F"
 current_theme = "blue"
 DEFAULT_COLORS = get_colors(current_theme)
 
