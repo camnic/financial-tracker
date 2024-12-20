@@ -21,7 +21,6 @@ from utils import (
     parse_args,
 )
 
-
 def visualize_budget(data_file):
     """
     Generate and display budget visualizations using Dash.

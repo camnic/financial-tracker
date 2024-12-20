@@ -5,9 +5,6 @@ import webbrowser
 from threading import Timer
 from utils import PORT_MAIN, PORT_PORTFOLIO, PORT_BUDGET, PORT_API, DEFAULT_STYLE
 
-# Global Feature Flag
-SHOW_DOLLAR = True
-
 # Script Configuration
 FUNCTIONS = {
     "calculate_portfolio": ("calculate_portfolio.py", PORT_API),

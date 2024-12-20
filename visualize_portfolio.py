@@ -22,7 +22,6 @@ from utils import (
     parse_args
 )
 
-
 def visualize_portfolio(portfolio_file):
     """
     Generate and display portfolio visualizations using Dash.
